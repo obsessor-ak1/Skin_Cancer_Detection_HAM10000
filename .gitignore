@@ -1,0 +1,9 @@
+# Excluding dummy notebooks
+testing*.ipynb
+
+# Ignoring PyCache files
+__pycache__/
+
+# Ignoring editor files
+.vscode/
+.idea/
