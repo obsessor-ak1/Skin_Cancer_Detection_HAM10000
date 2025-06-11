@@ -10,16 +10,14 @@ from torchvision.io import read_image
 class HAM10000Dataset(Dataset):
     """This class loads the HAM10000 dataset from the specified directory."""
 
-    def __init__(self, dataset_dir="./data", start=0, count=8000, transform=None):
+    def __init__(self, dataset_dir="./data", start=0, count=None, transform=None):
         self._data_path = Path(dataset_dir)
         self.metadata = pd.read_csv(self._data_path / "HAM10000_metadata.csv")
-        self.metadata = self.metadata.loc[start:start+count].reset_index(drop=True)
+        if count is not None:
+            self.metadata = self.metadata.loc[start:start + count].reset_index(drop=True)
         self._start = start
-        self._count = count
+        self._count = self.metadata.shape[0]
         self._transform = transform
-        assert 0 <= start, "Invalid start value"
-        assert start + count <= self.metadata.shape[0], "Invalid count"
-
         labels = self.metadata.dx.unique()
         self.label_map = dict(zip(labels, range(len(labels))))
         self._part1_folder = self._data_path / "HAM10000_images_part_1"
@@ -57,10 +55,10 @@ class Explorer:
             data = data[data == value]
         data = data.sample(n=max_count, replace=True)
         images = self._load_images(data.index)
-        n_rows = ceil(len(data) / 3)
-        plt.figure(figsize=(9, 4 * n_rows))
+        n_rows = ceil(len(data) / 4)
+        plt.figure(figsize=(12, 3 * n_rows))
         for i, (label, image) in enumerate(zip(data, images)):
-            plt.subplot(n_rows, 3, i + 1)
+            plt.subplot(n_rows, 4, i + 1)
             image = image.permute(1, 2, 0)
             plt.imshow(image)
             plt.title(label)

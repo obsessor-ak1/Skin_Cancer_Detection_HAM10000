@@ -7,3 +7,6 @@ __pycache__/
 # Ignoring editor files
 .vscode/
 .idea/
+
+# Ignoring data folder
+data/
