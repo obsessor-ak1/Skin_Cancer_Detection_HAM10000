@@ -33,6 +33,7 @@ class HAM10000Dataset(Dataset):
                 random_state=42
             )
             self.metadata = mt_train if split == "train" else mt_test
+        self.metadata.reset_index(drop=True, inplace=True)
         self._transform = transform
         self._target_transform = target_transform
         self.label_map = dict(zip(labels, range(len(labels))))
