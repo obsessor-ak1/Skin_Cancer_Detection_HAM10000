@@ -10,7 +10,7 @@ def predict(model: nn.Module, data: torch.Tensor):
     # Assuming the model and the data are on the same device
     logits = model(data)
     labels = torch.argmax(logits, dim=1)
-    return labels.squeeze()
+    return labels
 
 def separate(tensor: torch.Tensor):
     """Separates the tensor from gradient and returns a numpy array."""
