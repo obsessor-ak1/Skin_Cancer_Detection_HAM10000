@@ -1,6 +1,8 @@
 from math import ceil
 from pathlib import Path
+import shutil
 
+import kagglehub
 import matplotlib.pyplot as plt
 import pandas as pd
 from torch.utils.data import Dataset
@@ -15,6 +17,8 @@ class HAM10000Dataset(Dataset):
         self.metadata = pd.read_csv(self._data_path / "HAM10000_metadata.csv")
         if count is not None:
             self.metadata = self.metadata.loc[start:start + count].reset_index(drop=True)
+        else:
+            self.metadata = self.metadata.loc[start:].reset_index(drop=True)
         self._start = start
         self._count = self.metadata.shape[0]
         self._transform = transform
@@ -40,7 +44,7 @@ class HAM10000Dataset(Dataset):
 
 
 class Explorer:
-    """A class helps to explore and visualize the dataset"""
+    """A class helps to explore and visualize the dataset."""
     def __init__(self, dataset):
         self.dataset = dataset
 
@@ -69,3 +73,13 @@ class Explorer:
             image, _ = self.dataset[idx]
             images.append(image)
         return images
+
+def download_ham10000(path="./data", force_download=False):
+    """Downloads the HAM10000 dataset from kaggle."""
+    default_path = kagglehub.dataset_download(
+        "kmader/skin-cancer-mnist-ham10000",
+        force_download=force_download
+    )
+    print("Downloaded to:", default_path)
+    shutil.move(default_path, path)
+    print("Moved to:", path)

@@ -10,3 +10,9 @@ __pycache__/
 
 # Ignoring data folder
 data/
+
+# Ignoring the tensorboard results
+runs/
+
+# Ignoring important project documents
+docs/
