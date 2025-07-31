@@ -5,6 +5,8 @@ import shutil
 import kagglehub
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.model_selection import train_test_split
+import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image
 
@@ -12,22 +14,25 @@ from torchvision.io import read_image
 class HAM10000Dataset(Dataset):
     """This class loads the HAM10000 dataset from the specified directory."""
 
-    def __init__(self, dataset_dir="./data", start=0, count=None, transform=None, target_transform=None, download=False):
+    def __init__(self, dataset_dir="./data", start=0, count=None, transform=None, target_transform=None,
+                 download=False, split=None):
+        # Downloading the dataset if requested or not found
         if download:
             download_ham10000(path=dataset_dir)
         self._data_path = Path(dataset_dir)
         self.metadata = pd.read_csv(self._data_path / "HAM10000_metadata.csv")
         # Getting all the possible labels
         labels = self.metadata.dx.unique()
-        # Shuffling the rows of metadata so that both train and test datasets contain
-        # images from all types of lesions
+        # Performing a train test split if requested.
         self.metadata = self.metadata.sample(frac=1, random_state=1).reset_index(drop=True)
-        if count is not None:
-            self.metadata = self.metadata.loc[start:start + count].reset_index(drop=True)
-        else:
-            self.metadata = self.metadata.loc[start:].reset_index(drop=True)
-        self._start = start
-        self._count = self.metadata.shape[0]
+        if split:
+            mt_train, mt_test = train_test_split(
+                self.metadata,
+                test_size=0.2,
+                stratify=self.metadata.dx,
+                random_state=42
+            )
+            self.metadata = mt_train if split == "train" else mt_test
         self._transform = transform
         self._target_transform = target_transform
         self.label_map = dict(zip(labels, range(len(labels))))
@@ -35,7 +40,7 @@ class HAM10000Dataset(Dataset):
         self._part2_folder = self._data_path / "HAM10000_images_part_2"
 
     def __len__(self):
-        return self._count
+        return len(self.metadata)
 
     def __getitem__(self, idx):
         img_id, label = self.metadata.loc[idx, ["image_id", "dx"]]
@@ -52,9 +57,16 @@ class HAM10000Dataset(Dataset):
             label = self._target_transform(label)
         return image, label
 
+    @property
+    def sample_dist(self):
+        props = self.metadata.dx.value_counts(normalize=True)
+        props = props.loc[list(self.label_map.keys())]
+        return torch.tensor(props.to_numpy())
+
 
 class Explorer:
     """A class helps to explore and visualize the dataset."""
+
     def __init__(self, dataset):
         self.dataset = dataset
 
@@ -83,6 +95,7 @@ class Explorer:
             image, _ = self.dataset[idx]
             images.append(image)
         return images
+
 
 def download_ham10000(path="./data", force_download=False):
     """Downloads the HAM10000 dataset from kaggle."""

@@ -16,3 +16,6 @@ runs/
 
 # Ignoring important project documents
 docs/
+
+# Ignoring build files
+*.egg-info/
