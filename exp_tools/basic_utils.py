@@ -2,9 +2,10 @@ import math
 
 import matplotlib.pyplot as plt
 import torch
+from torch import nn
 
 
-def predict(model, data):
+def predict(model: nn.Module, data: torch.Tensor):
     """Returns predictions using trained model."""
     # Assuming the model and the data are on the same device
     logits = model(data)
@@ -14,6 +15,23 @@ def predict(model, data):
 def separate(tensor: torch.Tensor):
     """Separates the tensor from gradient and returns a numpy array."""
     return tensor.detach().cpu().numpy()
+
+
+def prepare_model(model: nn.Module, shape, verbose=True):
+    """Passes a dummy input to the model to initialize lazy layers
+     and visualize output shape."""
+    X = torch.randn(shape)
+    for name, module in model.named_children():
+        X = module(X)
+        if verbose:
+            print(f"{name}: {type(module).__name__} output shape: {X.shape}")
+
+
+def init_module(module: nn.Module):
+    if isinstance(module, (nn.Linear, nn.Conv2d)):
+        nn.init.xavier_uniform_(module.weight)
+        nn.init.zeros_(module.bias)
+
 
 def plot_history(history_dict):
     """Plots the training history of the model, including loss and

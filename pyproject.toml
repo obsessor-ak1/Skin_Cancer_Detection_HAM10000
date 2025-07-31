@@ -1,0 +1,26 @@
+[project]
+name = "skin_cancer_detection"
+version = "0.1.0"
+description = "A Research oriented ML Project."
+authors = [
+    { name="Aayush Kumar", email="aayushkumarfirst@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "torchvision",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "pandas",
+    "kagglehub"
+]
+
+[tool.setuptools.packages.find]
+where = ["exp_tools"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+

@@ -12,9 +12,16 @@ from torchvision.io import read_image
 class HAM10000Dataset(Dataset):
     """This class loads the HAM10000 dataset from the specified directory."""
 
-    def __init__(self, dataset_dir="./data", start=0, count=None, transform=None):
+    def __init__(self, dataset_dir="./data", start=0, count=None, transform=None, target_transform=None, download=False):
+        if download:
+            download_ham10000(path=dataset_dir)
         self._data_path = Path(dataset_dir)
         self.metadata = pd.read_csv(self._data_path / "HAM10000_metadata.csv")
+        # Getting all the possible labels
+        labels = self.metadata.dx.unique()
+        # Shuffling the rows of metadata so that both train and test datasets contain
+        # images from all types of lesions
+        self.metadata = self.metadata.sample(frac=1, random_state=1).reset_index(drop=True)
         if count is not None:
             self.metadata = self.metadata.loc[start:start + count].reset_index(drop=True)
         else:
@@ -22,7 +29,7 @@ class HAM10000Dataset(Dataset):
         self._start = start
         self._count = self.metadata.shape[0]
         self._transform = transform
-        labels = self.metadata.dx.unique()
+        self._target_transform = target_transform
         self.label_map = dict(zip(labels, range(len(labels))))
         self._part1_folder = self._data_path / "HAM10000_images_part_1"
         self._part2_folder = self._data_path / "HAM10000_images_part_2"
@@ -38,9 +45,12 @@ class HAM10000Dataset(Dataset):
         valid_path = path1 if path1.exists() else path2
 
         image = read_image(str(valid_path))
+        label = self.label_map[label]
         if self._transform:
             image = self._transform(image)
-        return image, self.label_map[label]
+        if self._target_transform:
+            label = self._target_transform(label)
+        return image, label
 
 
 class Explorer:

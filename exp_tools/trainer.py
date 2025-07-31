@@ -7,7 +7,7 @@ from exp_tools.basic_utils import predict, separate
 class Trainer:
     """A simple trainer class to train the model."""
 
-    def __init__(self, max_epochs=10, clip_grad=False, clip_val=1, device="cuda", metrics=None):
+    def __init__(self, max_epochs=10, clip_grad=False, clip_val=1.0, device="cpu", metrics=None):
         self._max_epochs = max_epochs
         self._device = torch.device(device)
         self.clip_grad = clip_grad
