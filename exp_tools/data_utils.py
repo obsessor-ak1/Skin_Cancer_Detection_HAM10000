@@ -14,7 +14,7 @@ from torchvision.io import read_image
 class HAM10000Dataset(Dataset):
     """This class loads the HAM10000 dataset from the specified directory."""
 
-    def __init__(self, dataset_dir="./data", start=0, count=None, transform=None, target_transform=None,
+    def __init__(self, dataset_dir="./data", transform=None, target_transform=None,
                  download=False, split=None):
         # Downloading the dataset if requested or not found
         if download:
