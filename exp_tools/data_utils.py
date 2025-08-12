@@ -39,18 +39,27 @@ class HAM10000Dataset(Dataset):
         self.label_map = dict(zip(labels, range(len(labels))))
         self._part1_folder = self._data_path / "HAM10000_images_part_1"
         self._part2_folder = self._data_path / "HAM10000_images_part_2"
+        self._image_paths = self._load_image_paths()
+
+    def _load_image_paths(self):
+        """Pre-loads the paths for all the images in the dataset."""
+        path_list = []
+        for image_id in self.metadata.image_id:
+            name = f"{image_id}.jpg"
+            path1 = self._part1_folder / name
+            path2 = self._part2_folder / name
+            valid_path = path1 if path1.exists() else path2
+            path_list.append(valid_path)
+        return path_list
 
     def __len__(self):
         return len(self.metadata)
 
     def __getitem__(self, idx):
+        label = self.metadata.dx[idx]
         img_id, label = self.metadata.loc[idx, ["image_id", "dx"]]
-        name = f"{img_id}.jpg"
-        path1 = self._part1_folder / name
-        path2 = self._part2_folder / name
-        valid_path = path1 if path1.exists() else path2
-
-        image = read_image(str(valid_path))
+        image_path = self._image_paths[idx]
+        image = read_image(str(image_path))
         label = self.label_map[label]
         if self._transform:
             image = self._transform(image)
