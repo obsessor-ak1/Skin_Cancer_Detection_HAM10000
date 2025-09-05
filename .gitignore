@@ -1,5 +1,6 @@
-# Excluding dummy notebooks
+# Excluding dummy notebooks and checkpoints
 testing*.ipynb
+.ipynb_checkpoints
 
 # Ignoring PyCache files
 __pycache__/
