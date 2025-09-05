@@ -145,7 +145,7 @@ class Trainer:
             print(f"\nTrain loss: {self.current_history.get_metric('loss')}")
             if val_data:
                 self._validate(model, loss_fn, val_data)
-                print(f"Val loss: {self.current_history.get_metric('val', train=False)}")
+                print(f"Val loss: {self.current_history.get_metric('loss', train=False)}")
         self.current_history.finish()
 
     def _fit_epoch(self, model, loss_fn, optimizer, train_data):
