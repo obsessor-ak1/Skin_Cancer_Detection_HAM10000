@@ -75,7 +75,7 @@ class History:
     def _generate_multiplot(self, axis, values, train=True, metric_title=None):
         """Generates a single plot for the training history metric (2D)."""
         x = range(self.epochs)
-        line_style = "--" if train else "-"
+        line_style = "-" if train else "--"
         prefix = "train" if train else "val"
         axis.set_xlabel("Epochs")
         axis.set_ylabel(metric_title.capitalize())
