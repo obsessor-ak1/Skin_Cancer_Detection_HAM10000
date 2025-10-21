@@ -6,7 +6,6 @@ import torch
 from torch import amp
 from torch import nn
 import torch.distributed as dist
-import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
 
@@ -105,8 +104,8 @@ class DistributedTrainer:
         )
         val_sampler = DistributedSampler(val_set, num_replicas=world_size, rank=rank, shuffle=False)
         # Preparing the loaders
-        train_loader = DataLoader(train_set, batch_size=self._batch_size_per_rank, sampler=train_sampler, num_workers=2)
-        val_loader = DataLoader(val_set, batch_size=self._batch_size_per_rank, sampler=val_sampler, num_workers=2)
+        train_loader = DataLoader(train_set, batch_size=self._batch_size_per_rank, sampler=train_sampler)
+        val_loader = DataLoader(val_set, batch_size=self._batch_size_per_rank, sampler=val_sampler)
         # Beginning the training loop
         checkpoint_path = None
         if rank == 0:
