@@ -16,9 +16,9 @@ class Logger(ABC):
 
 class WandBLogger(Logger):
     """A Logger that uses wandb to log metrics."""
-    def __init__(self, project_name, config, entity):
+    def __init__(self, project_name, config, entity, key=None):
         if not self.is_logged_in:
-            wandb.login()
+            wandb.login(key=key)
         self._run = wandb.init(project=project_name, entity=entity, config=config)
         self._is_completed = False
 

@@ -57,7 +57,7 @@ class DistributedTrainer:
             world_size=world_size,
         )
 
-    def prepare_trainer(self, model_class, optimizer_fn, train_set, loss, model_args=None, val_set=None, logger_classes=None):
+    def prepare_trainer(self, model_class, optimizer_fn, train_set, loss, model_args=None, val_set=None):
         """Prepares the trainer for training"""
         self._train_config["model_class"] = model_class
         self._train_config["optimizer_fn"] = optimizer_fn
@@ -143,6 +143,7 @@ class DistributedTrainer:
                     if i == self._max_epochs:
                         for logger in self._loggers:
                             logger.log_model(ckp_model_name)
+                            logger.complete()
                         checkpoint_path.cleanup()
         # Cleaning up the process group
         dist.destroy_process_group()
