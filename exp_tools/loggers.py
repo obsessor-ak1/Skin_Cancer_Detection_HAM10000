@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 
 import wandb
 
@@ -32,7 +33,7 @@ class WandBLogger(Logger):
 
     @property
     def is_logged_in(self):
-        return wandb.login(anonymous="must") is None
+        return os.environ.get("WANDB_API_KEY") is not None
 
     def complete(self):
         assert not self._is_completed
