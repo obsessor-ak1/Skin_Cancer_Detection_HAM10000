@@ -2,7 +2,7 @@ import math
 
 import matplotlib.pyplot as plt
 import torch
-from torch import nn
+from torch import nn, optim
 
 
 def predict(model: nn.Module, data: torch.Tensor):
@@ -48,3 +48,7 @@ def plot_history(history_dict):
             plt.plot(val_metrics[metric], label=f"val_{metric}")
         plt.legend(loc="best")
         plt.title(metric.title())
+
+
+def get_optimizer(model):
+    return optim.Adam(model.parameters(), lr=5e-5)
