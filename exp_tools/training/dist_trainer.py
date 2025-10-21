@@ -73,7 +73,7 @@ class DistributedTrainer:
     def is_ready(self):
         return self._is_ready
 
-    def _begin_training(self, rank):
+    def begin_training(self, rank):
         """A function to begin training session."""
         assert self.is_ready
         # Initializing the process
@@ -231,13 +231,3 @@ class DistributedTrainer:
             metrics[prefix+metric] = torch.tensor(
                 fun(y_true_total, y_pred_total), device=rank)
         return metrics
-
-    def fit(self):
-        """Trains the model on the given dataset and saves it to the checkpoint."""
-        world_size = self._proc_config["world_size"]
-        mp.spawn(
-            self._begin_training,
-            args=(),
-            nprocs=world_size,
-            join=True
-        )
