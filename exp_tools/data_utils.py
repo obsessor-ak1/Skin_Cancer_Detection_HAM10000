@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
 from torchvision.io import read_image
 
 
@@ -106,6 +106,40 @@ class Explorer:
             images.append(image)
         return images
 
+
+class DistributedWeightedRandomSampler(Sampler):
+    """A weighted random sampler suitable for distributed training."""
+    def __init__(self, weights, num_samples, num_replicas, rank, replacement=True):
+        super().__init__()
+        self.weights = torch.tensor(weights, dtype=torch.double)
+        self.num_samples = num_samples
+        self.rank = rank
+        self.num_replicas = num_replicas
+        self.replacement = replacement
+        remaining_samples = num_samples % num_replicas
+        if self.replacement and remaining_samples:
+            self.num_samples += num_replicas - remaining_samples
+        self.num_samples_per_rank = self.num_samples // num_replicas
+
+    def __iter__(self):
+        # Making the sampling deterministic for each process
+        generator = torch.Generator()
+        if hasattr(self, "epoch"):
+            generator.manual_seed(self.epoch)
+        else:
+            generator.manual_seed(0)
+        # Sampling indices
+        indices = torch.multinomial(
+            self.weights, self.num_samples, replacement=self.replacement, generator=generator
+        )
+        # splitting the indices
+        start = self.rank * self.num_samples_per_rank
+        end = start + self.num_samples_per_rank
+        indices = indices[start:end]
+        return iter(indices.tolist())
+
+    def __len__(self):
+        return self.num_samples_per_rank
 
 def download_ham10000(path="./data", force_download=False):
     """Downloads the HAM10000 dataset from kaggle."""

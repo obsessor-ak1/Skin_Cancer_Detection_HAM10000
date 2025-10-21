@@ -54,4 +54,4 @@ class SoftAttentionBlock(nn.Module):
             final_map = self.gamma * final_map.reshape(X.size(0), -1, h, w)
         if self.concat:
             final_map = torch.cat((X, final_map), dim=1)
-        return self.dropout(final_map)
+        return self.dropout(F.relu(final_map))

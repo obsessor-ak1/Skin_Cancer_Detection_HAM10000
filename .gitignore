@@ -20,3 +20,6 @@ docs/
 
 # Ignoring build files
 *.egg-info/
+
+# Ignoring model artifacts
+*.pt
