@@ -17,8 +17,9 @@ dependencies = [
     "kagglehub"
 ]
 
-[tool.setuptools]
-packages = ["exp_tools"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["exp_tools*"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
