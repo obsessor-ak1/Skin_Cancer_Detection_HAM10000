@@ -12,9 +12,20 @@ from torch.utils.data import DataLoader, DistributedSampler
 from exp_tools.basic_utils import predict, separate
 from exp_tools.data_utils import DistributedWeightedRandomSampler
 
-class DistributedTrainer: 
+
+class DistributedTrainer:
     """A trainer that performs distributed training."""
-    def __init__(self, max_epochs=5, batch_size_per_rank=128, checkpoint_interval=5, mixed_precision=False, clip_grad=None, metrics=None, loggers=None):
+
+    def __init__(
+        self,
+        max_epochs=5,
+        batch_size_per_rank=128,
+        checkpoint_interval=5,
+        mixed_precision=False,
+        clip_grad=None,
+        metrics=None,
+        loggers=None,
+    ):
         self._max_epochs = max_epochs
         self._batch_size_per_rank = batch_size_per_rank
         self._checkpoint_interval = checkpoint_interval
@@ -27,7 +38,9 @@ class DistributedTrainer:
         self._train_config = dict()
         self._loggers = loggers
 
-    def init_config(self, host="localhost", port="12355", world_size=None, backend="nccl"):
+    def init_config(
+        self, host="localhost", port="12355", world_size=None, backend="nccl"
+    ):
         """Initialize distributed configuration."""
         os.environ["MASTER_ADDR"] = host
         os.environ["MASTER_PORT"] = port
@@ -56,7 +69,9 @@ class DistributedTrainer:
             world_size=world_size,
         )
 
-    def prepare_trainer(self, model_class, optimizer_fn, train_set, loss, model_args=None, val_set=None):
+    def prepare_trainer(
+        self, model_class, optimizer_fn, train_set, loss, model_args=None, val_set=None
+    ):
         """Prepares the trainer for training"""
         self._train_config["model_class"] = model_class
         self._train_config["optimizer_fn"] = optimizer_fn
@@ -79,7 +94,9 @@ class DistributedTrainer:
         self._setup(rank)
         # Initializing the model and broadcasting its parameters
         torch.cuda.set_device(rank)
-        model = self._train_config["model_class"](**self._train_config["model_args"]).to(rank)
+        model = self._train_config["model_class"](
+            **self._train_config["model_args"]
+        ).to(rank)
         ddp_model = DDP(model, device_ids=[rank])
         for param in ddp_model.parameters():
             dist.broadcast(param.data, src=0)
@@ -100,20 +117,28 @@ class DistributedTrainer:
             weights=train_sample_weights,
             num_samples=len(train_set),
             num_replicas=world_size,
-            rank=rank
+            rank=rank,
         )
-        val_sampler = DistributedSampler(val_set, num_replicas=world_size, rank=rank, shuffle=False)
+        val_sampler = DistributedSampler(
+            val_set, num_replicas=world_size, rank=rank, shuffle=False
+        )
         # Preparing the loaders
-        train_loader = DataLoader(train_set, batch_size=self._batch_size_per_rank, sampler=train_sampler)
-        val_loader = DataLoader(val_set, batch_size=self._batch_size_per_rank, sampler=val_sampler)
+        train_loader = DataLoader(
+            train_set, batch_size=self._batch_size_per_rank, sampler=train_sampler
+        )
+        val_loader = DataLoader(
+            val_set, batch_size=self._batch_size_per_rank, sampler=val_sampler
+        )
         # Beginning the training loop
         checkpoint_path = None
         if rank == 0:
             checkpoint_path = tempfile.TemporaryDirectory()
-        for i in range(1, self._max_epochs+1):
+        for i in range(1, self._max_epochs + 1):
             if rank == 0:
                 print(f"Epoch: {i}/{self._max_epochs}:")
-            train_metrics = self._train_epoch(ddp_model, optimizer, loss_fn, train_loader, rank)
+            train_metrics = self._train_epoch(
+                ddp_model, optimizer, loss_fn, train_loader, rank
+            )
             for metrics in train_metrics:
                 dist.all_reduce(train_metrics[metrics], op=dist.ReduceOp.AVG)
             # Printing training status and logging its metrics
@@ -152,9 +177,11 @@ class DistributedTrainer:
         batch_wise_loss = 0
         num_samples = 0
         model.train()
+
         def for_pass(model, X, y):
             output = model(X)
             return loss_fn(output, y)
+
         # Initializing Gradient Scaler for mixed precision training
         scaler = amp.GradScaler()
         # Starting the training loop
@@ -189,7 +216,7 @@ class DistributedTrainer:
             num_samples += y.size(0)
         full_train_loss = torch.tensor(batch_wise_loss / num_samples, device=rank)
         # Recording train metrics
-        train_metrics = self._record_metrics(model, train_loader, train=True)
+        train_metrics = self._record_metrics(model, train_loader, rank, train=True)
         train_metrics["train_loss"] = full_train_loss
         return train_metrics
 
@@ -207,7 +234,7 @@ class DistributedTrainer:
 
         full_val_loss = torch.tensor(batch_wise_loss / num_samples, device=rank)
         # Recording the validation/test metrics
-        val_metrics = self._record_metrics(model, val_loader, train=False)
+        val_metrics = self._record_metrics(model, val_loader, rank, train=False)
         val_metrics["val_loss"] = full_val_loss
         return val_metrics
 
@@ -227,6 +254,7 @@ class DistributedTrainer:
         y_pred_total = np.concatenate(y_pred_total)
         prefix = "train_" if train else "test_"
         for metric, fun in self._metrics.items():
-            metrics[prefix+metric] = torch.tensor(
-                fun(y_true_total, y_pred_total), device=rank)
+            metrics[prefix + metric] = torch.tensor(
+                fun(y_true_total, y_pred_total), device=rank
+            )
         return metrics
