@@ -149,7 +149,7 @@ class DistributedTrainer:
                     logger.log_metric(train_metrics, epoch=i)
             val_metrics = self._validate(ddp_model, loss_fn, val_loader, rank)
             for metrics in val_metrics:
-                dist.all_reduce(val_metrics[metrics], op=dist.ReduceOp.SUM)
+                dist.all_reduce(val_metrics[metrics], op=dist.ReduceOp.AVG)
             # Printing validation status and logging its metrics
             if rank == 0:
                 print("Validation completed...")
