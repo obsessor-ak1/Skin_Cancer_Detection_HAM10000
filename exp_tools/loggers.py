@@ -6,6 +6,7 @@ import wandb
 
 class Logger(ABC):
     """Abstract base class for loggers."""
+
     @abstractmethod
     def log_metric(self, metric_values, epoch=-1):
         """Logs metrics for a given epoch, default to last epoch."""
@@ -17,6 +18,7 @@ class Logger(ABC):
 
 class WandBLogger(Logger):
     """A Logger that uses wandb to log metrics."""
+
     def __init__(self, project_name, config, entity, key=None):
         if not self.is_logged_in:
             wandb.login(key=key)
@@ -29,7 +31,7 @@ class WandBLogger(Logger):
     def log_model(self, model_path, model_name=None):
         if model_name is None:
             model_name = self._run.name + "_model"
-        self._run.log_model(model_path, model_name=model_name)
+        self._run.log_model(model_path, name=model_name)
 
     @property
     def is_logged_in(self):
