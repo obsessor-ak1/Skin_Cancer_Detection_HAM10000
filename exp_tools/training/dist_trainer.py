@@ -144,7 +144,7 @@ class DistributedTrainer:
             # Printing training status and logging its metrics
             if rank == 0:
                 print("Training completed...")
-                print(f"Train loss: {train_metrics['train_loss']}")
+                print(f"Train loss: {train_metrics['train/loss']}")
                 for logger in self._loggers:
                     logger.log_metric(train_metrics, epoch=i)
             val_metrics = self._validate(ddp_model, loss_fn, val_loader, rank)
@@ -153,7 +153,7 @@ class DistributedTrainer:
             # Printing validation status and logging its metrics
             if rank == 0:
                 print("Validation completed...")
-                print(f"Val loss: {val_metrics['val_loss']}")
+                print(f"Val loss: {val_metrics['test/loss']}")
                 for logger in self._loggers:
                     logger.log_metric(val_metrics, epoch=i)
 
