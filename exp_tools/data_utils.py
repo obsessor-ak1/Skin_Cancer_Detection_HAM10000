@@ -11,32 +11,46 @@ from torch.utils.data import Dataset, Sampler
 from torchvision.io import read_image
 
 
+HAM10000_LABEL_MAP = {
+    "bkl": 0,
+    "nv": 1,
+    "df": 2,
+    "mel": 3,
+    "vasc": 4,
+    "bcc": 5,
+    "akiec": 6,
+}
+
+
 class HAM10000Dataset(Dataset):
     """This class loads the HAM10000 dataset from the specified directory."""
 
-    def __init__(self, dataset_dir="./data", transform=None, target_transform=None,
-                 download=False, split=None):
+    def __init__(
+        self,
+        dataset_dir="./data",
+        transform=None,
+        target_transform=None,
+        download=False,
+        split=None,
+    ):
         # Downloading the dataset if requested or not found
         if download:
             download_ham10000(path=dataset_dir)
         self._data_path = Path(dataset_dir)
         self.metadata = pd.read_csv(self._data_path / "HAM10000_metadata.csv")
-        # Getting all the possible labels
-        labels = self.metadata.dx.unique()
         # Performing a train test split if requested.
-        self.metadata = self.metadata.sample(frac=1, random_state=1).reset_index(drop=True)
+        self.metadata = self.metadata.sample(frac=1, random_state=1).reset_index(
+            drop=True
+        )
         if split:
             mt_train, mt_test = train_test_split(
-                self.metadata,
-                test_size=0.2,
-                stratify=self.metadata.dx,
-                random_state=42
+                self.metadata, test_size=0.2, stratify=self.metadata.dx, random_state=42
             )
             self.metadata = mt_train if split == "train" else mt_test
         self.metadata.reset_index(drop=True, inplace=True)
         self._transform = transform
         self._target_transform = target_transform
-        self.label_map = dict(zip(labels, range(len(labels))))
+        self.label_map = HAM10000_LABEL_MAP
         self._part1_folder = self._data_path / "HAM10000_images_part_1"
         self._part2_folder = self._data_path / "HAM10000_images_part_2"
         self._image_paths = self._load_image_paths()
@@ -109,6 +123,7 @@ class Explorer:
 
 class DistributedWeightedRandomSampler(Sampler):
     """A weighted random sampler suitable for distributed training."""
+
     def __init__(self, weights, num_samples, num_replicas, rank, replacement=True):
         super().__init__()
         self.weights = torch.tensor(weights, dtype=torch.double)
@@ -130,7 +145,10 @@ class DistributedWeightedRandomSampler(Sampler):
             generator.manual_seed(0)
         # Sampling indices
         indices = torch.multinomial(
-            self.weights, self.num_samples, replacement=self.replacement, generator=generator
+            self.weights,
+            self.num_samples,
+            replacement=self.replacement,
+            generator=generator,
         )
         # splitting the indices
         start = self.rank * self.num_samples_per_rank
@@ -141,11 +159,11 @@ class DistributedWeightedRandomSampler(Sampler):
     def __len__(self):
         return self.num_samples_per_rank
 
+
 def download_ham10000(path="./data", force_download=False):
     """Downloads the HAM10000 dataset from kaggle."""
     default_path = kagglehub.dataset_download(
-        "kmader/skin-cancer-mnist-ham10000",
-        force_download=force_download
+        "kmader/skin-cancer-mnist-ham10000", force_download=force_download
     )
     print("Downloaded to:", default_path)
     shutil.move(default_path, path)

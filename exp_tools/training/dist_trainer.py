@@ -25,6 +25,7 @@ class DistributedTrainer:
         clip_grad=None,
         metrics=None,
         loggers=None,
+        model_save_path=None,
     ):
         self._max_epochs = max_epochs
         self._batch_size_per_rank = batch_size_per_rank
@@ -37,6 +38,9 @@ class DistributedTrainer:
         self._proc_config = dict()
         self._train_config = dict()
         self._loggers = loggers
+        self.model_save_path = model_save_path
+
+        self._scaler = None
 
     def init_config(
         self, host="localhost", port="12355", world_size=None, backend="nccl"
@@ -129,6 +133,9 @@ class DistributedTrainer:
         val_loader = DataLoader(
             val_set, batch_size=self._batch_size_per_rank, sampler=val_sampler
         )
+        # Initializing Gradient Scaler for mixed precision training
+        if self.mixed_precision:
+            self._scaler = amp.GradScaler()
         # Beginning the training loop
         checkpoint_path = None
         if rank == 0:
@@ -164,7 +171,12 @@ class DistributedTrainer:
                     ckp_model_name = f"checkpoint_{rank}_{i}.pth"
                     ckp_path = os.path.join(checkpoint_path.name, ckp_model_name)
                     torch.save(state, ckp_path)
+                    print(f"Checkpoint recorded at: {ckp_path}")
                     if i == self._max_epochs:
+                        if self.model_save_path is not None:
+                            torch.save(
+                                state, f"{self._model_save_path}/{ckp_model_name}"
+                            )
                         for logger in self._loggers:
                             logger.log_model(ckp_path)
                             logger.complete()
@@ -182,8 +194,6 @@ class DistributedTrainer:
             output = model(X)
             return loss_fn(output, y)
 
-        # Initializing Gradient Scaler for mixed precision training
-        scaler = amp.GradScaler()
         # Starting the training loop
         for X, y in train_loader:
             X, y = X.to(rank), y.to(rank)
@@ -194,7 +204,7 @@ class DistributedTrainer:
                 # Using scaled loss (by a factor) during mixed precision for backward pass
                 # in case the gradients get too small or large to fit in fp16 type because
                 # overflow or underflow during calculation.
-                scaler.scale(loss).backward()
+                self._scaler.scale(loss).backward()
             else:
                 loss = for_pass(model, X, y)
                 loss.backward()
@@ -202,14 +212,14 @@ class DistributedTrainer:
             if self._clip_grad is not None:
                 if self.mixed_precision:
                     # Unscaling to get true gradient before clipping
-                    scaler.unscale_(optimizer)
+                    self._scaler.unscale_(optimizer)
                 nn.utils.clip_grad_norm_(model.parameters(), self._clip_grad)
 
             if self.mixed_precision:
                 # Optimizing by unscaling the gradients
-                scaler.step(optimizer)
+                self._scaler.step(optimizer)
                 # Updating the scaling factor
-                scaler.update()
+                self._scaler.update()
             else:
                 optimizer.step()
             batch_wise_loss += loss.item() * y.size(0)
@@ -254,7 +264,12 @@ class DistributedTrainer:
         y_pred_total = np.concatenate(y_pred_total)
         prefix = "train/" if train else "test/"
         for metric, fun in self._metrics.items():
-            metrics[prefix + metric] = torch.tensor(
-                fun(y_true_total, y_pred_total), device=rank
-            )
+            value = fun(y_true_total, y_pred_total)
+            if isinstance(value, dict):
+                for cls, cls_val in value.items():
+                    metrics[prefix + f"{metric}/{cls}"] = torch.tensor(
+                        cls_val, device=rank
+                    )
+            else:
+                metrics[prefix + metric] = torch.tensor(value, device=rank)
         return metrics
