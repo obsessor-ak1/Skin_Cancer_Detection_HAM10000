@@ -166,7 +166,7 @@ class DistributedTrainer:
                     torch.save(state, ckp_path)
                     if i == self._max_epochs:
                         for logger in self._loggers:
-                            logger.log_model(ckp_model_name)
+                            logger.log_model(ckp_path)
                             logger.complete()
                         checkpoint_path.cleanup()
         # Cleaning up the process group
