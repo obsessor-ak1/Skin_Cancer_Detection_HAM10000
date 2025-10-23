@@ -217,7 +217,7 @@ class DistributedTrainer:
         full_train_loss = torch.tensor(batch_wise_loss / num_samples, device=rank)
         # Recording train metrics
         train_metrics = self._track_metrics(model, train_loader, rank, train=True)
-        train_metrics["train_loss"] = full_train_loss
+        train_metrics["train/loss"] = full_train_loss
         return train_metrics
 
     def _validate(self, model, loss_fn, val_loader, rank):
@@ -235,7 +235,7 @@ class DistributedTrainer:
         full_val_loss = torch.tensor(batch_wise_loss / num_samples, device=rank)
         # Recording the validation/test metrics
         val_metrics = self._track_metrics(model, val_loader, rank, train=False)
-        val_metrics["val_loss"] = full_val_loss
+        val_metrics["test/loss"] = full_val_loss
         return val_metrics
 
     def _track_metrics(self, model, loader, rank, train=False):
