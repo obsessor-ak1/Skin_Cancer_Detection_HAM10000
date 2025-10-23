@@ -216,7 +216,7 @@ class DistributedTrainer:
             num_samples += y.size(0)
         full_train_loss = torch.tensor(batch_wise_loss / num_samples, device=rank)
         # Recording train metrics
-        train_metrics = self._record_metrics(model, train_loader, rank, train=True)
+        train_metrics = self._track_metrics(model, train_loader, rank, train=True)
         train_metrics["train_loss"] = full_train_loss
         return train_metrics
 
@@ -234,11 +234,11 @@ class DistributedTrainer:
 
         full_val_loss = torch.tensor(batch_wise_loss / num_samples, device=rank)
         # Recording the validation/test metrics
-        val_metrics = self._record_metrics(model, val_loader, rank, train=False)
+        val_metrics = self._track_metrics(model, val_loader, rank, train=False)
         val_metrics["val_loss"] = full_val_loss
         return val_metrics
 
-    def _record_metrics(self, model, loader, rank, train=False):
+    def _track_metrics(self, model, loader, rank, train=False):
         """Records and returns the configured metrics for the model on the
         loader."""
         metrics = dict()
@@ -252,7 +252,7 @@ class DistributedTrainer:
                 y_pred_total.append(separate(y_pred))
         y_true_total = np.concatenate(y_true_total)
         y_pred_total = np.concatenate(y_pred_total)
-        prefix = "train_" if train else "test_"
+        prefix = "train/" if train else "test/"
         for metric, fun in self._metrics.items():
             metrics[prefix + metric] = torch.tensor(
                 fun(y_true_total, y_pred_total), device=rank
