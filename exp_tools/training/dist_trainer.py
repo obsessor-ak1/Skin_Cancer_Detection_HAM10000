@@ -25,7 +25,7 @@ class DistributedTrainer:
         clip_grad=None,
         metrics=None,
         loggers=None,
-        model_save_path=None,
+        model_save_dir=None,
     ):
         self._max_epochs = max_epochs
         self._batch_size_per_rank = batch_size_per_rank
@@ -38,8 +38,9 @@ class DistributedTrainer:
         self._proc_config = dict()
         self._train_config = dict()
         self._loggers = loggers
-        self.model_save_path = model_save_path
-
+        self.save_dir = model_save_dir
+        if self.save_dir is not None:
+            os.makedirs(self.save_dir, exist_ok=True)
         self._scaler = None
 
     def init_config(
@@ -173,7 +174,7 @@ class DistributedTrainer:
                     torch.save(state, ckp_path)
                     print(f"Checkpoint recorded at: {ckp_path}")
                     if i == self._max_epochs:
-                        if self.model_save_path is not None:
+                        if self.save_dir is not None:
                             torch.save(
                                 state, f"{self._model_save_path}/{ckp_model_name}"
                             )
