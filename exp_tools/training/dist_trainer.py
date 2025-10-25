@@ -75,11 +75,19 @@ class DistributedTrainer:
         )
 
     def prepare_trainer(
-        self, model_class, optimizer_fn, train_set, loss, model_args=None, val_set=None
+        self,
+        model_class,
+        optimizer_fn,
+        train_set,
+        loss,
+        optimizer_params=None,
+        model_args=None,
+        val_set=None,
     ):
         """Prepares the trainer for training"""
         self._train_config["model_class"] = model_class
         self._train_config["optimizer_fn"] = optimizer_fn
+        self._train_config["optimizer_params"] = optimizer_params
         self._train_config["train_set"] = train_set
         self._train_config["val_set"] = val_set
         self._train_config["loss_fn"] = loss
@@ -106,7 +114,9 @@ class DistributedTrainer:
         for param in ddp_model.parameters():
             dist.broadcast(param.data, src=0)
         # Initializing the optimizer and loss
-        optimizer = self._train_config["optimizer_fn"](ddp_model)
+        optimizer = self._train_config["optimizer_fn"](
+            ddp_model, self._train_config["optimizer_params"]
+        )
         loss_fn = self._train_config["loss_fn"]
         # Preparing the datasets
         train_set = self._train_config["train_set"]
@@ -263,14 +273,14 @@ class DistributedTrainer:
                 y_pred_total.append(separate(y_pred))
         y_true_total = np.concatenate(y_true_total)
         y_pred_total = np.concatenate(y_pred_total)
-        prefix = "train/" if train else "test/"
+        prefix = "train" if train else "test"
         for metric, fun in self._metrics.items():
             value = fun(y_true_total, y_pred_total)
             if isinstance(value, dict):
                 for cls, cls_val in value.items():
-                    metrics[prefix + f"{metric}/{cls}"] = torch.tensor(
+                    metrics[f"{prefix}_{metric}/{cls}"] = torch.tensor(
                         cls_val, device=rank
                     )
             else:
-                metrics[prefix + metric] = torch.tensor(value, device=rank)
+                metrics[f"{prefix}/{metric}"] = torch.tensor(value, device=rank)
         return metrics

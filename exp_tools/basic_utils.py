@@ -12,6 +12,7 @@ def predict(model: nn.Module, data: torch.Tensor):
     labels = torch.argmax(logits, dim=1)
     return labels
 
+
 def separate(tensor: torch.Tensor):
     """Separates the tensor from gradient and returns a numpy array."""
     return tensor.detach().cpu().numpy()
@@ -19,7 +20,7 @@ def separate(tensor: torch.Tensor):
 
 def prepare_model(model: nn.Module, shape, verbose=True):
     """Passes a dummy input to the model to initialize lazy layers
-     and visualize output shape."""
+    and visualize output shape."""
     X = torch.randn(shape)
     for name, module in model.named_children():
         X = module(X)
@@ -50,5 +51,5 @@ def plot_history(history_dict):
         plt.title(metric.title())
 
 
-def get_optimizer(model):
-    return optim.Adam(model.parameters(), lr=5e-5)
+def get_optimizer(model, params):
+    return optim.Adam(model.parameters(), **params)
