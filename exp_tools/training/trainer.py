@@ -1,5 +1,6 @@
 import copy
 import math
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,10 +13,7 @@ class History:
     """Represent the history of the training process."""
 
     def __init__(self, loggers=None):
-        self._history = {
-            "train": {"loss": []},
-            "val": {"loss": []}
-        }
+        self._history = {"train": {"loss": []}, "val": {"loss": []}}
         self.loggers = loggers
         self.__finished = False
 
@@ -26,7 +24,14 @@ class History:
         section = "train" if train else "val"
         current_values = self._history[section].setdefault(name, [])
         current_values.append(metric)
-        # TODO: Logger support
+        metric_logs = dict()
+        if not isinstance(metric, dict):
+            metric_logs[f"{section}/{name}"] = metric
+        else:
+            for label, value in metric.items():
+                metric_logs[f"{section}_{name}/{label}"] = value
+        for logger in self.loggers:
+            logger.log_metric(metric_logs, epoch=len(current_values))
 
     def get_metric(self, name, epoch=-1, train=True):
         """Returns the value of a particular metric at a certain epoch."""
@@ -42,8 +47,7 @@ class History:
         """Converts and returns a list of dicts to a dict of lists."""
         keys = list_of_dicts[0].keys()
         final_dict = {
-            key: [value_dict[key] for value_dict in list_of_dicts]
-            for key in keys
+            key: [value_dict[key] for value_dict in list_of_dicts] for key in keys
         }
         return final_dict
 
@@ -55,7 +59,9 @@ class History:
                 self._history["train"][metric] = History._vectorize_list_of_dict(value)
                 val_metrics = self._history["val"].get(metric, [])
                 if len(val_metrics) > 0:
-                    self._history["val"][metric] = History._vectorize_list_of_dict(val_metrics)
+                    self._history["val"][metric] = History._vectorize_list_of_dict(
+                        val_metrics
+                    )
 
     def finish(self):
         """Finalizes the history and freezes the state."""
@@ -99,10 +105,19 @@ class History:
             axis.legend(loc="best")
         axis.set_title(f"{metric_title.capitalize()}")
 
+    @classmethod
+    def from_training_dict(cls, training_dict):
+        history = cls()
+        history._history = training_dict
+        history.finish()
+        return history
+
     def plot_history(self):
         """Plots the complete training history."""
         num_plots = len(self._history["train"])
-        num_vectored_metrics = sum(isinstance(values, dict) for values in self._history["val"].values())
+        num_vectored_metrics = sum(
+            isinstance(values, dict) for values in self._history["val"].values()
+        )
         num_plots += num_vectored_metrics
         num_rows = math.ceil(num_plots / 2)
         fig, axes = plt.subplots(num_rows, 2, figsize=(12, num_rows * 5))
@@ -117,7 +132,9 @@ class History:
                 self._generate_multiplot(axes[i], train_metric, metric_title=metric)
                 if len(val_metric) > 0:
                     i += 1
-                    self._generate_multiplot(axes[i], val_metric, False, metric_title=metric)
+                    self._generate_multiplot(
+                        axes[i], val_metric, False, metric_title=metric
+                    )
             else:
                 metrics = {"train": train_metric, "val": val_metric}
                 self._generate_single_plot(axes[i], metrics, metric_title=metric)
@@ -127,25 +144,49 @@ class History:
 class Trainer:
     """A simple trainer class to train the model."""
 
-    def __init__(self, max_epochs=10, clip_grad=False, clip_val=1.0, device="cpu", metrics=None):
+    def __init__(
+        self,
+        max_epochs=10,
+        clip_grad=False,
+        clip_val=1.0,
+        device="cpu",
+        metrics=None,
+        history=None,
+        checkpoint_interval=5,
+        checkpoint_path="./checkpoints/",
+    ):
         self._max_epochs = max_epochs
         self._device = torch.device(device)
         self.clip_grad = clip_grad
-        self.current_history = History()
+        if not isinstance(history, History):
+            self.current_history = History()
         self.metrics = metrics
         self.clip_val = clip_val
+        self._checkpoint_interval = checkpoint_interval
+        os.makedirs(checkpoint_path, exists_ok=True)
+        self._checkpoint_path = checkpoint_path
 
     def fit(self, model, loss_fn, optimizer, train_data, val_data=None):
         """Fits the model to the data."""
         self.reset_history()
         model = model.to(self._device)
-        for epoch in range(self._max_epochs):
+        for epoch in range(1, self._max_epochs + 1):
             print(f"Epoch {epoch + 1}/{self._max_epochs}")
             self._fit_epoch(model, loss_fn, optimizer, train_data)
             print(f"\nTrain loss: {self.current_history.get_metric('loss')}")
             if val_data:
                 self._validate(model, loss_fn, val_data)
-                print(f"Val loss: {self.current_history.get_metric('loss', train=False)}")
+                print(
+                    f"Val loss: {self.current_history.get_metric('loss', train=False)}"
+                )
+            # Checkpoint support
+            if epoch % self._checkpoint_interval == 0 or epoch == self._max_epochs:
+                state = model.state_dict()
+                torch.save(state, f"{self._checkpoint_path}/model_{epoch}.pth")
+        # Model logging support
+        for logger in self.current_history.loggers:
+            if logger.allow_model_logging:
+                logger.log_model(f"{self._checkpoint_path}/model_{epoch}.pth")
         self.current_history.finish()
 
     def _fit_epoch(self, model, loss_fn, optimizer, train_data):
@@ -161,7 +202,9 @@ class Trainer:
             loss = loss_fn(y_hat, y)
             loss.backward()
             if self.clip_grad:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=self.clip_val)
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), max_norm=self.clip_val
+                )
             optimizer.step()
             loss_val = loss.item() * y.size(0)
             n_samples_processed += y.size(0)
@@ -195,7 +238,6 @@ class Trainer:
         """Records the metrics for the model on the data, if user provided."""
         if not self.metrics:
             return
-        history_section = "train" if train else "val"
         # Accumulating the predictions
         y_true_total = []
         y_pred_total = []
@@ -209,7 +251,9 @@ class Trainer:
         y_pred_total = np.concatenate(y_pred_total)
         # Recording the metrics
         for metric, fun in self.metrics.items():
-            self.current_history.add_metric(metric, fun(y_true_total, y_pred_total), train)
+            self.current_history.add_metric(
+                metric, fun(y_true_total, y_pred_total), train
+            )
 
     def reset_history(self):
         """Resets the current history dictionary."""
@@ -222,4 +266,5 @@ class Trainer:
         n_dots = 50 - n_dashes
         print(
             f"\r[{'-' * n_dashes}{'.' * n_dots}] - batch: {current_batch}/{total_batches} - {percent_complete:.2f} complete",
-            end='')
+            end="",
+        )

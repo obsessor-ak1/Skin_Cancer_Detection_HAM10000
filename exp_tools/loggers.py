@@ -15,6 +15,11 @@ class Logger(ABC):
     def log_model(self, model_path, model_name=None):
         """Logs the model parameters."""
 
+    @abstractmethod
+    @property
+    def allow_model_logging(self):
+        """Returns true if logger supports (or should support) model logging."""
+
 
 class WandBLogger(Logger):
     """A Logger that uses wandb to log metrics."""
@@ -49,3 +54,22 @@ class WandBLogger(Logger):
         assert not self._is_completed
         self._run.finish()
         self._is_completed = True
+
+    def get_history_dict(self):
+        api = wandb.Api()
+        run = api.run(f"{self._run.entity}/{self._run.project}/{self._run.id}")
+        hist_dict = {"train": dict(), "val": dict()}
+        run_hist = run.history()
+        for metric in run_hist.columns:
+            if "/" not in metric:
+                hist_dict[metric] = run_hist[metric].to_list()
+                continue
+            section, tag = metric.split("/")[:2]
+            parts = section.split("_")
+            if len(parts) != 2:
+                hist_dict[section][tag] = run_hist[metric].to_list()
+            else:
+                hist_dict[parts[0]].setdefault(parts[1], dict())
+                hist_dict[parts[0]][parts[1]][tag] = run_hist[metric].to_list()
+
+        return hist_dict
