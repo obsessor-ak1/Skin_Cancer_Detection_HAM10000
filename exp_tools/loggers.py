@@ -15,8 +15,8 @@ class Logger(ABC):
     def log_model(self, model_path, model_name=None):
         """Logs the model parameters."""
 
-    @abstractmethod
     @property
+    @abstractmethod
     def allow_model_logging(self):
         """Returns true if logger supports (or should support) model logging."""
 
