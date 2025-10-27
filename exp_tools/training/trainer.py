@@ -165,7 +165,7 @@ class Trainer:
         self.metrics = metrics
         self.clip_val = clip_val
         self._checkpoint_interval = checkpoint_interval
-        os.makedirs(checkpoint_path, exists_ok=True)
+        os.makedirs(checkpoint_path, exist_ok=True)
         self._checkpoint_path = checkpoint_path
         self._mixed_precision = mixed_precision
 
