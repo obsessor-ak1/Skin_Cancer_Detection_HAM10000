@@ -25,14 +25,15 @@ class History:
         section = "train" if train else "val"
         current_values = self._history[section].setdefault(name, [])
         current_values.append(metric)
-        metric_logs = dict()
-        if not isinstance(metric, dict):
-            metric_logs[f"{section}/{name}"] = metric
-        else:
-            for label, value in metric.items():
-                metric_logs[f"{section}_{name}/{label}"] = value
-        for logger in self.loggers:
-            logger.log_metric(metric_logs, epoch=len(current_values))
+        if self.loggers is not None:
+            metric_logs = dict()
+            if not isinstance(metric, dict):
+                metric_logs[f"{section}/{name}"] = metric
+            else:
+                for label, value in metric.items():
+                    metric_logs[f"{section}_{name}/{label}"] = value
+            for logger in self.loggers:
+                logger.log_metric(metric_logs, epoch=len(current_values))
 
     def get_metric(self, name, epoch=-1, train=True):
         """Returns the value of a particular metric at a certain epoch."""
