@@ -5,6 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch.amp import autocast, GradScaler
 
 from exp_tools.basic_utils import predict, separate
 
@@ -154,6 +155,7 @@ class Trainer:
         history=None,
         checkpoint_interval=5,
         checkpoint_path="./checkpoints/",
+        mixed_precision=False,
     ):
         self._max_epochs = max_epochs
         self._device = torch.device(device)
@@ -165,14 +167,18 @@ class Trainer:
         self._checkpoint_interval = checkpoint_interval
         os.makedirs(checkpoint_path, exists_ok=True)
         self._checkpoint_path = checkpoint_path
+        self._mixed_precision = mixed_precision
 
     def fit(self, model, loss_fn, optimizer, train_data, val_data=None):
         """Fits the model to the data."""
         self.reset_history()
         model = model.to(self._device)
+        scaler = None
+        if self._mixed_precision:
+            scaler = GradScaler()
         for epoch in range(1, self._max_epochs + 1):
             print(f"Epoch {epoch + 1}/{self._max_epochs}")
-            self._fit_epoch(model, loss_fn, optimizer, train_data)
+            self._fit_epoch(model, loss_fn, optimizer, train_data, scaler)
             print(f"\nTrain loss: {self.current_history.get_metric('loss')}")
             if val_data:
                 self._validate(model, loss_fn, val_data)
@@ -189,7 +195,7 @@ class Trainer:
                 logger.log_model(f"{self._checkpoint_path}/model_{epoch}.pth")
         self.current_history.finish()
 
-    def _fit_epoch(self, model, loss_fn, optimizer, train_data):
+    def _fit_epoch(self, model, loss_fn, optimizer, train_data, scaler=None):
         """Fits one single epoch."""
         num_batches = len(train_data)
         loss_vals = []
@@ -198,14 +204,27 @@ class Trainer:
         for batch, (X, y) in enumerate(train_data):
             optimizer.zero_grad()
             X, y = X.to(device=self._device), y.to(self._device)
-            y_hat = model(X)
-            loss = loss_fn(y_hat, y)
-            loss.backward()
+            if self._mixed_precision:
+                with autocast(device_type="cuda"):
+                    y_hat = model(X)
+                    loss = loss_fn(y_hat, y)
+                scaler.scale(loss).backward()
+            else:
+                y_hat = model(X)
+                loss = loss_fn(y_hat, y)
+                loss.backward()
             if self.clip_grad:
+                if self._mixed_precision:
+                    scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=self.clip_val
                 )
-            optimizer.step()
+
+            if self._mixed_precision:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
             loss_val = loss.item() * y.size(0)
             n_samples_processed += y.size(0)
             loss_vals.append(loss_val)

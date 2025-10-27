@@ -185,7 +185,7 @@ class DistributedTrainer:
                     print(f"Checkpoint recorded at: {ckp_path}")
                     if i == self._max_epochs:
                         if self.save_dir is not None:
-                            torch.save(state, f"{self._save_dir}/{ckp_model_name}")
+                            torch.save(state, f"{self.save_dir}/{ckp_model_name}")
                         for logger in self._loggers:
                             if logger.allow_model_logging:
                                 logger.log_model(ckp_path)
