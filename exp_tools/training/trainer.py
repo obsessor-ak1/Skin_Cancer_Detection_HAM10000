@@ -178,7 +178,7 @@ class Trainer:
         if self._mixed_precision:
             scaler = GradScaler()
         for epoch in range(1, self._max_epochs + 1):
-            print(f"Epoch {epoch + 1}/{self._max_epochs}")
+            print(f"Epoch {epoch}/{self._max_epochs}")
             self._fit_epoch(model, loss_fn, optimizer, train_data, scaler)
             print(f"\nTrain loss: {self.current_history.get_metric('loss')}")
             if val_data:
