@@ -191,9 +191,10 @@ class Trainer:
                 state = model.state_dict()
                 torch.save(state, f"{self._checkpoint_path}/model_{epoch}.pth")
         # Model logging support
-        for logger in self.current_history.loggers:
-            if logger.allow_model_logging:
-                logger.log_model(f"{self._checkpoint_path}/model_{epoch}.pth")
+        if self.current_history.loggers:
+            for logger in self.current_history.loggers:
+                if logger.allow_model_logging:
+                    logger.log_model(f"{self._checkpoint_path}/model_{epoch}.pth")
         self.current_history.finish()
 
     def _fit_epoch(self, model, loss_fn, optimizer, train_data, scaler=None):
