@@ -14,7 +14,7 @@ def make_blocks(
             if end_1x1:
                 ksize = 1
                 padding = 0
-                stride = 0
+                stride = 1
 
         if i != 0:
             in_channels = out_channels
