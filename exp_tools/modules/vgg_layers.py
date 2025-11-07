@@ -13,8 +13,8 @@ def make_blocks(
         if i == count - 1:
             if end_1x1:
                 ksize = 1
-                padding = None
-                stride = None
+                padding = 0
+                stride = 0
 
         if i != 0:
             in_channels = out_channels
