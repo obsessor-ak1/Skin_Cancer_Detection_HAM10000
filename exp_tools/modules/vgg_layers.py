@@ -10,7 +10,7 @@ def make_blocks(
         ksize = 3
         padding = 1
         stride = 1
-        if i != count - 1:
+        if i == count - 1:
             if end_1x1:
                 ksize = 1
                 padding = None
