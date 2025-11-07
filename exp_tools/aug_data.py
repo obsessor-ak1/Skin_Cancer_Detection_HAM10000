@@ -12,8 +12,12 @@ HAM10000_CLASSES = list(HAM10000_LABEL_MAP.keys())
 
 aug_pipeline = tfs.Compose(
     [
-        tfs.RandomRotation(180, fill=(0,)),
+        tfs.Pad(padding=200, padding_mode="edge"),
+        tfs.RandomRotation(180, expand=True, fill=(0,)),
+        tfs.CenterCrop(500),
+        tfs.Pad(padding=100, padding_mode="edge"),
         tfs.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1), fill=(0,)),
+        tfs.CenterCrop(500),
         tfs.RandomHorizontalFlip(p=0.5),
         tfs.RandomVerticalFlip(p=0.5),
         tfs.Resize((224, 224)),

@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torch.amp import autocast, GradScaler
+from torch.amp import GradScaler, autocast
 
 from exp_tools.basic_utils import predict, separate
 
@@ -141,6 +141,10 @@ class History:
                 metrics = {"train": train_metric, "val": val_metric}
                 self._generate_single_plot(axes[i], metrics, metric_title=metric)
             i += 1
+
+    def merge_with(self, another_history):
+        """Merges the current history object with another backwards"""
+        # TODO
 
 
 class Trainer:
