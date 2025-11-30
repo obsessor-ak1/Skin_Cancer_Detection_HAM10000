@@ -162,6 +162,7 @@ Some things I’d like to improve (or that you can contribute):
 - Full **attention-augmented versions** of multiple other backbones (ResNet, Inception-ResNet, DenseNet).
 - Better handling of **class imbalance** (focal loss, class weights, advanced augmentations).
 - Reproduce (or beat!) the metrics from the original paper on HAM10000.
+- Implement other better papers or approaches of skin cancer classification on this dataset.
 
 ---
 
